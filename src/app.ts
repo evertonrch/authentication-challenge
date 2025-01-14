@@ -7,6 +7,8 @@ import User from "./core/user.js"
 const app = express()
 app.use(express.json())
 
+const users: User[] = []
+
 const validatedBody = (req: any, res: Response, next: NextFunction): any => {
     const {email, password} = req.body as User
 
@@ -20,15 +22,26 @@ const validatedBody = (req: any, res: Response, next: NextFunction): any => {
     next()
 }
 
-const errorHandler = (err, req, res, next) => {
-    res.status(err.status).json({ status: err.status, detail: err.body })
+const validateUser = (req: any, res: Response, next: NextFunction): any => {
+    const existsUser = users.find(user => user.email === req.email)
+    if(existsUser) {
+        return res.status(400).json({
+            message: "there is already a registered user with this email"
+        })
+    }
     next()
 }
 
 const register = (req: any, res: Response, next: NextFunction): any => {
-    const token = generate(req.email)
-    res.status(200).json({ token })
-    next()
+    try{
+        const token = generate(req.email)
+        users.push({email: req.email, password: ""})
+        res.status(200).json({ token })
+    } catch(e) {
+        res.status(500).json({
+            message: "cannot generate token."
+        })
+    }
 }
 
 const fooBar = (req: Request, res: Response, next: NextFunction) => {
@@ -36,16 +49,14 @@ const fooBar = (req: Request, res: Response, next: NextFunction) => {
 }
 
 const handleGlobalPath = (req: Request, res, next): any => {
-    res.status(404).json({
+    return res.status(404).json({
         status: 404,
         message: `${req.originalUrl} does not exists, only /register and /foo-bar are available.`
     })
-
-    next()
 }
 
-app.use("/register", validatedBody, register, errorHandler)
-app.use("/foo-bar", auth, fooBar)
+app.post("/register", validatedBody, validateUser, register)
+app.get("/foo-bar", auth, fooBar)
 app.all("*", handleGlobalPath) 
 
 export default app
