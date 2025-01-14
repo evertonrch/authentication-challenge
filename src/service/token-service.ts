@@ -13,7 +13,7 @@ const validate = (token: string): boolean => {
 }
 
 const generate = (data: string): string => {
-    return sign(data, JWT_KEY)
+    return sign({data}, JWT_KEY, { expiresIn: 60 })
 }
 
 export { generate, validate }
